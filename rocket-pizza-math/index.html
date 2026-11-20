@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rocket Pizza Math</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gray-10:#f4f4f4; --gray-20:#e0e0e0; --gray-30:#c6c6c6; --gray-50:#8d8d8d;
+  --gray-70:#525252; --gray-100:#161616;
+  --blue-60:#0f62fe; --blue-70:#0043ce; --blue-10:#edf5ff;
+  --green-70:#198038; --green-10:#defbe6; --green-60:#24a148;
+  --red-60:#da1e28; --red-10:#fff1f1;
+  --orange-40:#ff832b; --orange-70:#8a3800;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--gray-10);color:var(--gray-100);font-size:16px;line-height:1.5}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--blue-60);outline-offset:2px}
+.hidden{display:none !important}
+
+.app-bar{background:var(--gray-100);color:#fff;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.brand{font-weight:600}
+.app-bar-right{font-size:14px;color:var(--gray-30)}
+
+.wrap{max-width:880px;margin:0 auto;padding:32px 24px 48px}
+h1{font-size:40px;line-height:48px;font-weight:600;margin:0 0 8px}
+h2{font-size:28px;line-height:36px;font-weight:600;margin:0 0 8px}
+.lead{font-size:18px;color:var(--gray-70);margin:0 0 24px;max-width:640px}
+.muted{color:var(--gray-70)}
+.small{font-size:14px}
+
+.card{background:#fff;padding:24px;margin-bottom:16px}
+.card.dimmed{opacity:.45;pointer-events:none}
+fieldset{border:0;margin:0;padding:0;min-width:0}
+legend{font-weight:600;margin-bottom:12px;padding:0}
+
+.mode-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.mode-card{position:relative;display:flex;flex-direction:column;gap:4px;padding:16px;border:2px solid var(--gray-30);background:#fff;cursor:pointer}
+.mode-card input{position:absolute;opacity:0;pointer-events:none}
+.mode-card:has(input:checked){border-color:var(--blue-60);background:var(--blue-10)}
+.mode-card:has(input:focus-visible){outline:2px solid var(--blue-60);outline-offset:2px}
+.mode-title{font-weight:600;font-size:18px}
+.mode-desc{font-size:14px;color:var(--gray-70)}
+
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.chip{position:relative;cursor:pointer}
+.chip input{position:absolute;opacity:0;pointer-events:none}
+.chip span{display:inline-block;min-width:60px;text-align:center;padding:10px 14px;border:2px solid var(--gray-30);background:#fff;font-weight:600}
+.chip input:checked + span{background:var(--blue-60);border-color:var(--blue-60);color:#fff}
+.chip input:focus-visible + span{outline:2px solid var(--blue-60);outline-offset:2px}
+
+.btn-primary{background:var(--blue-60);color:#fff;border:0;height:48px;padding:0 24px;font-size:16px}
+.btn-primary:hover{background:var(--blue-70)}
+.btn-secondary{background:#fff;color:var(--blue-60);border:2px solid var(--blue-60);height:48px;padding:0 22px;font-size:16px}
+.btn-secondary:hover{background:var(--blue-10)}
+.btn-ghost{background:transparent;color:var(--blue-60);border:0;height:40px;padding:0 12px;font-size:16px}
+.btn-ghost:hover{background:var(--gray-20)}
+.start-actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:8px}
+.warning{color:var(--red-60);font-weight:600}
+
+.hud{display:flex;gap:12px;align-items:stretch;margin-bottom:16px;flex-wrap:wrap}
+.stat{background:#fff;padding:12px 20px;flex:1;min-width:120px}
+.stat-label{display:block;font-size:12px;letter-spacing:.32px;text-transform:uppercase;color:var(--gray-70)}
+.stat-value{font-size:28px;font-weight:600;line-height:36px}
+.hud .btn-ghost{align-self:center}
+
+.fuel-head{display:flex;justify-content:space-between;font-weight:600;margin-bottom:8px}
+.fuel-segments{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:8px}
+.fuel-seg{height:24px;background:var(--gray-20);transition:background .3s}
+.fuel-seg.on{background:var(--orange-40)}
+
+.question-card{text-align:center}
+.tag{display:inline-block;font-size:12px;letter-spacing:.32px;text-transform:uppercase;font-weight:600;padding:4px 8px;color:#fff;margin-bottom:12px}
+.tag-blue{background:var(--blue-60)}
+.tag-orange{background:var(--orange-70)}
+.pizza{width:200px;height:200px;display:block;margin:0 auto 12px}
+.prompt{font-size:36px;font-weight:600;margin:8px 0 20px;min-height:44px}
+.prompt.small-prompt{font-size:24px}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:560px;margin:0 auto}
+.choice{position:relative;display:flex;align-items:center;justify-content:center;min-height:84px;background:#fff;border:2px solid var(--gray-50);font-size:32px;font-weight:600;color:var(--gray-100);padding:8px}
+.choice:hover:not(:disabled){background:var(--gray-20)}
+.choice:disabled{cursor:default}
+.choice.correct{background:var(--green-10);border-color:var(--green-60)}
+.choice.wrong{background:var(--red-10);border-color:var(--red-60)}
+.choice-key{position:absolute;top:6px;left:8px;font-size:12px;color:var(--gray-70)}
+.feedback-row{min-height:64px;margin-top:20px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.feedback{margin:0;font-size:18px;min-height:28px}
+.feedback.good{color:var(--green-70)}
+.feedback.bad{color:var(--red-60)}
+
+.overlay{position:fixed;inset:0;background:rgba(22,22,22,.7);display:flex;align-items:center;justify-content:center;padding:24px;z-index:10}
+.overlay-card{background:#fff;padding:32px;max-width:420px;width:100%;text-align:center}
+.rocket-stage{height:170px;display:flex;justify-content:center;align-items:flex-end;overflow:hidden}
+.rocket{width:72px;height:144px;transform:translateY(20px)}
+.rocket.launching{animation:liftoff 1.4s ease-in-out infinite alternate}
+@keyframes liftoff{from{transform:translateY(20px)}to{transform:translateY(-10px)}}
+.flame{animation:flicker .12s infinite alternate;transform-origin:50% 0}
+@keyframes flicker{from{transform:scaleY(.8)}to{transform:scaleY(1.2)}}
+
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px;text-align:center}
+.stats-grid .stat-value{font-size:36px}
+.summary-note{font-size:18px;margin:16px 0 0}
+
+@media (max-width:640px){
+  .mode-grid{grid-template-columns:1fr}
+  h1{font-size:32px;line-height:40px}
+  .prompt{font-size:28px}
+  .choice{font-size:26px;min-height:72px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none !important;transition:none !important}
+}
+</style>
+</head>
+<body>
+
+<header class="app-bar">
+  <span class="brand">Rocket Pizza Math</span>
+  <span class="app-bar-right" id="app-bar-right"></span>
+</header>
+
+<main class="wrap">
+
+  <!-- START SCREEN -->
+  <section id="screen-start" aria-labelledby="start-title">
+    <h1 id="start-title">Rocket Pizza Math</h1>
+    <p class="lead">Answer times tables to fuel the rocket and fractions to slice the astronauts' pizza. Every 5 correct answers makes one launch.</p>
+
+    <div class="card">
+      <fieldset>
+        <legend>Choose a game</legend>
+        <div class="mode-grid">
+          <label class="mode-card">
+            <input type="radio" name="mode" value="rocket" checked>
+            <span class="mode-title">Rocket Math</span>
+            <span class="mode-desc">Multiplication facts</span>
+          </label>
+          <label class="mode-card">
+            <input type="radio" name="mode" value="pizza">
+            <span class="mode-title">Pizza Fractions</span>
+            <span class="mode-desc">Name the shaded fraction</span>
+          </label>
+        </div>
+      </fieldset>
+    </div>
+
+    <div class="card" id="tables-card">
+      <fieldset>
+        <legend>Times tables to practice</legend>
+        <div class="chip-row" id="table-chips"></div>
+        <button type="button" class="btn-ghost" id="toggle-all">Clear all</button>
+      </fieldset>
+    </div>
+
+    <p id="start-warning" class="warning hidden" role="alert">Pick at least one times table.</p>
+    <div class="start-actions">
+      <button class="btn-primary" id="start-btn" type="button">Start game</button>
+      <p class="muted">Best score on this device: <strong id="best-score">0</strong></p>
+    </div>
+  </section>
+
+  <!-- PLAY SCREEN -->
+  <section id="screen-play" class="hidden" aria-label="Game">
+    <div class="hud">
+      <div class="stat"><span class="stat-label">Score</span><span id="hud-score" class="stat-value">0</span></div>
+      <div class="stat"><span class="stat-label">Launches</span><span id="hud-launches" class="stat-value">0</span></div>
+      <div class="stat"><span class="stat-label">Streak</span><span id="hud-streak" class="stat-value">0</span></div>
+      <button class="btn-ghost" id="end-btn" type="button">End game</button>
+    </div>
+
+    <div class="card">
+      <div class="fuel-head"><span>Rocket fuel</span><span id="fuel-text">0 / 5</span></div>
+      <div class="fuel-segments" id="fuel-segments" aria-hidden="true"></div>
+      <p class="muted small" style="margin:0">Correct answers add fuel. Fill all 5 segments to launch.</p>
+    </div>
+
+    <div class="card question-card">
+      <span class="tag tag-blue" id="q-tag">Rocket Math</span>
+      <div id="q-visual"></div>
+      <p id="q-prompt" class="prompt" aria-live="polite"></p>
+      <div class="choices" id="choices"></div>
+      <div class="feedback-row">
+        <p id="feedback" class="feedback" aria-live="assertive"></p>
+        <button class="btn-primary hidden" id="next-btn" type="button">Next question</button>
+      </div>
+    </div>
+    <p class="muted small">Keyboard: press 1 to 4 to answer, then Enter to continue.</p>
+  </section>
+
+  <!-- SUMMARY SCREEN -->
+  <section id="screen-summary" class="hidden" aria-labelledby="sum-title">
+    <h1 id="sum-title">Mission complete!</h1>
+    <div class="card">
+      <div class="stats-grid">
+        <div><span class="stat-label">Score</span><span id="sum-score" class="stat-value">0</span></div>
+        <div><span class="stat-label">Launches</span><span id="sum-launches" class="stat-value">0</span></div>
+        <div><span class="stat-label">Accuracy</span><span id="sum-acc" class="stat-value">0%</span></div>
+        <div><span class="stat-label">Best streak</span><span id="sum-streak" class="stat-value">0</span></div>
+        <div><span class="stat-label">Questions</span><span id="sum-total" class="stat-value">0</span></div>
+      </div>
+      <p id="sum-note" class="summary-note"></p>
+    </div>
+    <div class="start-actions">
+      <button class="btn-primary" id="again-btn" type="button">Play again</button>
+      <button class="btn-secondary" id="settings-btn" type="button">Change settings</button>
+    </div>
+  </section>
+
+</main>
+
+<!-- LAUNCH OVERLAY -->
+<div id="launch-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="launch-title">
+  <div class="overlay-card">
+    <div class="rocket-stage">
+      <svg id="launch-rocket" class="rocket" viewBox="0 0 80 160" aria-hidden="true">
+        <path class="flame" d="M31 122 L40 158 L49 122 Z" fill="#ff832b"/>
+        <path d="M22 92 L8 128 L22 120 Z" fill="#da1e28" stroke="#161616" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M58 92 L72 128 L58 120 Z" fill="#da1e28" stroke="#161616" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M40 4 C60 30 62 80 58 120 L22 120 C18 80 20 30 40 4 Z" fill="#f4f4f4" stroke="#161616" stroke-width="3" stroke-linejoin="round"/>
+        <circle cx="40" cy="58" r="10" fill="#0f62fe" stroke="#161616" stroke-width="3"/>
+      </svg>
+    </div>
+    <h2 id="launch-title">Blast off!</h2>
+    <p id="launch-text" class="muted"></p>
+    <button class="btn-primary" id="launch-continue" type="button">Keep flying</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const FUEL_GOAL = 5;
+  const TABLES = [2,3,4,5,6,7,8,9,10];
+  const DENOMS = [2,3,4,6,8];
+  const PRAISE = ['Blast-tastic!','Right on target!','Super math!','Out of this world!','Pizza perfect!','Great thinking!'];
+  const BEST_KEY = 'rocket-pizza-math-best';
+
+  const $ = id => document.getElementById(id);
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const randInt = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+  const shuffle = arr => {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  const S = {
+    mode: 'rocket', tables: new Set(TABLES),
+    score: 0, launches: 0, fuel: 0, streak: 0, bestStreak: 0,
+    correct: 0, total: 0, q: null, answered: false, pendingLaunch: false, best: 0
+  };
+
+  try { S.best = Number(localStorage.getItem(BEST_KEY)) || 0; } catch (e) {}
+
+  /* ---------- Question builders ---------- */
+
+  function makeQuestion(kind, prompt, answer, distractors, visualHTML, explain, small) {
+    return { kind, prompt, answer, choices: shuffle([answer, ...distractors]), visualHTML, explain, small: !!small };
+  }
+
+  function makeRocketQuestion() {
+    const t = pick([...S.tables]);
+    const other = randInt(1, 10);
+    const [a, b] = Math.random() < 0.5 ? [t, other] : [other, t];
+    const ans = a * b;
+    const wrong = new Set();
+    const candidates = shuffle([ans + t, ans - t, ans + 1, ans - 1, (a + 1) * b, a * (b + 1), (a - 1) * b, a * (b - 1), ans + 10, ans - 10]);
+    for (const c of candidates) {
+      if (c > 0 && c !== ans && wrong.size < 3) wrong.add(c);
+    }
+    while (wrong.size < 3) {
+      const c = ans + randInt(-9, 9);
+      if (c > 0 && c !== ans) wrong.add(c);
+    }
+    return makeQuestion('rocket', `${a} × ${b} = ?`, String(ans), [...wrong].map(String), null,
+      `${a} × ${b} = ${ans}.`);
+  }
+
+  function makeFractionQuestion() {
+    const d = pick(DENOMS);
+    const n = randInt(1, d - 1);
+    const ans = `${n}/${d}`;
+    const cands = [];
+    if (n + 1 < d) cands.push(`${n + 1}/${d}`);
+    if (n - 1 >= 1) cands.push(`${n - 1}/${d}`);
+    if (n > 1) cands.push(`${d}/${n}`);            // flipped: a common mix-up
+    for (const dd of DENOMS) if (dd !== d && n < dd) cands.push(`${n}/${dd}`);
+    const pool = new Set();
+    for (const c of shuffle(cands)) {
+      if (c !== ans && pool.size < 3) pool.add(c);
+    }
+    while (pool.size < 3) {
+      const dd = pick(DENOMS);
+      const nn = randInt(1, dd - 1);
+      const c = `${nn}/${dd}`;
+      if (c !== ans) pool.add(c);
+    }
+    return makeQuestion('pizza', 'What fraction of the pizza is shaded?', ans, [...pool],
+      pizzaSVG(d, n), `${n} of ${d} equal slices are shaded, so the answer is ${ans}.`, true);
+  }
+
+  function pizzaSVG(d, n) {
+    const cx = 110, cy = 110, r = 92, step = (2 * Math.PI) / d;
+    const pt = (ang, rad) => [cx + rad * Math.cos(ang), cy + rad * Math.sin(ang)].map(v => v.toFixed(2));
+    let slices = '';
+    for (let i = 0; i < d; i++) {
+      const a1 = -Math.PI / 2 + i * step;
+      const a2 = a1 + step;
+      const am = a1 + step / 2;
+      const [x1, y1] = pt(a1, r);
+      const [x2, y2] = pt(a2, r);
+      const shaded = i < n;
+      slices += `<path d="M${cx} ${cy} L${x1} ${y1} A${r} ${r} 0 0 1 ${x2} ${y2} Z" fill="${shaded ? '#ff832b' : '#fdf3dc'}" stroke="#8d4b00" stroke-width="2.5" stroke-linejoin="round"/>`;
+      if (shaded) {
+        const [px, py] = pt(am, r * 0.55);
+        slices += `<circle cx="${px}" cy="${py}" r="8" fill="#da1e28"/>`;
+      }
+    }
+    return `<svg class="pizza" viewBox="0 0 220 220" role="img" aria-label="Pizza cut into ${d} equal slices, ${n} of them shaded"><circle cx="110" cy="110" r="${r + 6}" fill="#d9a441"/>${slices}</svg>`;
+  }
+
+  /* ---------- Rendering ---------- */
+
+  function showScreen(name) {
+    ['start', 'play', 'summary'].forEach(s => $('screen-' + s).classList.toggle('hidden', s !== name));
+    if (name === 'start') $('best-score').textContent = S.best;
+    $('app-bar-right').textContent = name === 'play' ? modeLabel() : '';
+    window.scrollTo(0, 0);
+  }
+
+  function modeLabel() {
+    return S.mode === 'rocket' ? 'Rocket Math' : 'Pizza Fractions';
+  }
+
+  function buildFuelSegments() {
+    const wrap = $('fuel-segments');
+    wrap.innerHTML = '';
+    for (let i = 0; i < FUEL_GOAL; i++) {
+      const seg = document.createElement('div');
+      seg.className = 'fuel-seg';
+      wrap.appendChild(seg);
+    }
+  }
+
+  function updateHUD() {
+    $('hud-score').textContent = S.score;
+    $('hud-launches').textContent = S.launches;
+    $('hud-streak').textContent = S.streak;
+    $('fuel-text').textContent = `${S.fuel} / ${FUEL_GOAL}`;
+    [...$('fuel-segments').children].forEach((seg, i) => seg.classList.toggle('on', i < S.fuel));
+  }
+
+  function renderQuestion() {
+    const q = S.q;
+    const tag = $('q-tag');
+    tag.textContent = q.kind === 'pizza' ? 'Pizza Fractions' : 'Rocket Math';
+    tag.className = 'tag ' + (q.kind === 'pizza' ? 'tag-orange' : 'tag-blue');
+    $('q-visual').innerHTML = q.visualHTML || '';
+    $('q-visual').classList.toggle('hidden', !q.visualHTML);
+    const prompt = $('q-prompt');
+    prompt.textContent = q.prompt;
+    prompt.classList.toggle('small-prompt', q.small);
+
+    const wrap = $('choices');
+    wrap.innerHTML = '';
+    q.choices.forEach((c, i) => {
+      const b = document.createElement('button');
+      b.className = 'choice';
+      b.type = 'button';
+      b.innerHTML = `<span class="choice-key" aria-hidden="true">${i + 1}</span><span class="choice-val"></span>`;
+      b.querySelector('.choice-val').textContent = c;
+      b.setAttribute('aria-label', c);
+      b.addEventListener('click', () => answer(i));
+      wrap.appendChild(b);
+    });
+
+    const fb = $('feedback');
+    fb.textContent = '';
+    fb.className = 'feedback';
+    $('next-btn').classList.add('hidden');
+  }
+
+  /* ---------- Game flow ---------- */
+
+  function startGame() {
+    const mode = document.querySelector('input[name=mode]:checked').value;
+    S.tables = new Set([...document.querySelectorAll('#table-chips input:checked')].map(x => Number(x.value)));
+    if (mode !== 'pizza' && S.tables.size === 0) {
+      $('start-warning').classList.remove('hidden');
+      return;
+    }
+    $('start-warning').classList.add('hidden');
+    Object.assign(S, {
+      mode, score: 0, launches: 0, fuel: 0, streak: 0, bestStreak: 0,
+      correct: 0, total: 0, pendingLaunch: false, answered: false
+    });
+    showScreen('play');
+    updateHUD();
+    nextQuestion();
+  }
+
+  function nextQuestion() {
+    S.answered = false;
+    const kind = S.mode === 'rocket' ? 'rocket' : 'pizza';
+    S.q = kind === 'rocket' ? makeRocketQuestion() : makeFractionQuestion();
+    renderQuestion();
+  }
+
+  function answer(i) {
+    if (S.answered || !S.q) return;
+    S.answered = true;
+    S.total++;
+    const q = S.q;
+    const ok = q.choices[i] === q.answer;
+
+    [...document.querySelectorAll('#choices .choice')].forEach((b, idx) => {
+      b.disabled = true;
+      if (q.choices[idx] === q.answer) b.classList.add('correct');
+      else if (idx === i) b.classList.add('wrong');
+    });
+
+    const fb = $('feedback');
+    if (ok) {
+      S.correct++;
+      S.streak++;
+      S.bestStreak = Math.max(S.bestStreak, S.streak);
+      S.score += 10 + (S.streak >= 3 ? 5 : 0);
+      S.fuel = Math.min(S.fuel + 1, FUEL_GOAL);
+      if (S.fuel >= FUEL_GOAL) S.pendingLaunch = true;
+      fb.textContent = `${pick(PRAISE)} ${q.explain}`;
+      fb.className = 'feedback good';
+    } else {
+      S.streak = 0;
+      fb.textContent = `Not quite. ${q.explain}`;
+      fb.className = 'feedback bad';
+    }
+
+    updateHUD();
+    const nb = $('next-btn');
+    nb.textContent = S.pendingLaunch ? 'Launch rocket' : 'Next question';
+    nb.classList.remove('hidden');
+    nb.focus();
+  }
+
+  function onNext() {
+    if (S.pendingLaunch) showLaunch();
+    else nextQuestion();
+  }
+
+  function showLaunch() {
+    S.launches++;
+    S.pendingLaunch = false;
+    $('launch-text').textContent = `${FUEL_GOAL} correct answers filled the tank. Launch ${S.launches} is on its way to the space station pizza party!`;
+    $('launch-rocket').classList.add('launching');
+    $('launch-overlay').classList.remove('hidden');
+    updateHUD();
+    $('launch-continue').focus();
+  }
+
+  function continueAfterLaunch() {
+    $('launch-overlay').classList.add('hidden');
+    $('launch-rocket').classList.remove('launching');
+    S.fuel = 0;
+    updateHUD();
+    nextQuestion();
+  }
+
+  function showSummary() {
+    if (S.score > S.best) {
+      S.best = S.score;
+      try { localStorage.setItem(BEST_KEY, String(S.best)); } catch (e) {}
+    }
+    const acc = S.total ? Math.round((S.correct / S.total) * 100) : 0;
+    $('sum-score').textContent = S.score;
+    $('sum-launches').textContent = S.launches;
+    $('sum-acc').textContent = acc + '%';
+    $('sum-streak').textContent = S.bestStreak;
+    $('sum-total').textContent = S.total;
+    $('sum-note').textContent = S.total === 0
+      ? 'Answer a question to earn a score next time.'
+      : S.launches > 0
+        ? `You launched ${S.launches} rocket${S.launches > 1 ? 's' : ''}. Great work!`
+        : `So close! Fill all ${FUEL_GOAL} fuel segments to launch your first rocket.`;
+    $('launch-overlay').classList.add('hidden');
+    showScreen('summary');
+  }
+
+  /* ---------- Setup ---------- */
+
+  function init() {
+    const chips = $('table-chips');
+    TABLES.forEach(n => {
+      const l = document.createElement('label');
+      l.className = 'chip';
+      l.innerHTML = `<input type="checkbox" value="${n}" checked><span>${n}s</span>`;
+      chips.appendChild(l);
+    });
+
+    buildFuelSegments();
+    $('best-score').textContent = S.best;
+
+    $('start-btn').addEventListener('click', startGame);
+    $('next-btn').addEventListener('click', onNext);
+    $('end-btn').addEventListener('click', showSummary);
+    $('launch-continue').addEventListener('click', continueAfterLaunch);
+    $('again-btn').addEventListener('click', startGame);
+    $('settings-btn').addEventListener('click', () => showScreen('start'));
+
+    $('toggle-all').addEventListener('click', () => {
+      const boxes = [...document.querySelectorAll('#table-chips input')];
+      const allOn = boxes.every(b => b.checked);
+      boxes.forEach(b => { b.checked = !allOn; });
+      $('toggle-all').textContent = allOn ? 'Select all' : 'Clear all';
+    });
+
+    document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', () => {
+      const mode = document.querySelector('input[name=mode]:checked').value;
+      $('tables-card').classList.toggle('dimmed', mode === 'pizza');
+    }));
+
+    document.addEventListener('keydown', e => {
+      if ($('screen-play').classList.contains('hidden')) return;
+      if ($('launch-overlay').classList.contains('hidden') === false) return;
+      if (/^[1-4]$/.test(e.key) && !S.answered && S.q) {
+        const i = Number(e.key) - 1;
+        if (i < S.q.choices.length) {
+          e.preventDefault();
+          answer(i);
+        }
+      }
+    });
+
+    showScreen('start');
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

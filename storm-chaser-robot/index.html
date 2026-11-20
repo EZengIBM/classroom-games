@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Storm Chaser Robot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gray-10:#f4f4f4; --gray-20:#e0e0e0; --gray-30:#c6c6c6; --gray-50:#8d8d8d;
+  --gray-70:#525252; --gray-80:#393939; --gray-100:#161616;
+  --blue-10:#edf5ff; --blue-60:#0f62fe; --blue-70:#0043ce;
+  --green-10:#defbe6; --green-70:#198038;
+  --red-60:#da1e28;
+  --purple-60:#8a3ffc;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--gray-10);color:var(--gray-100);font-size:16px;line-height:1.5}
+button{font:inherit;cursor:pointer}
+input{font:inherit}
+:focus-visible{outline:2px solid var(--blue-60);outline-offset:2px}
+.hidden{display:none !important}
+
+.app-bar{background:var(--gray-100);color:#fff;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.brand{font-weight:600}
+.app-bar-right{font-size:14px;color:var(--gray-30)}
+
+.wrap{max-width:880px;margin:0 auto;padding:32px 24px 48px}
+h1{font-size:40px;line-height:48px;font-weight:600;margin:0 0 8px}
+h2{font-size:20px;line-height:28px;font-weight:600;margin:0 0 12px}
+.lead{font-size:18px;color:var(--gray-70);margin:0 0 24px;max-width:640px}
+.muted{color:var(--gray-70)}
+.small{font-size:14px}
+.card{background:#fff;padding:24px;margin-bottom:16px}
+.field-label{display:block;font-weight:600;margin-bottom:8px}
+.text-input{width:100%;max-width:280px;height:44px;padding:0 12px;border:1px solid var(--gray-50);background:var(--gray-10);color:var(--gray-100)}
+.text-input:focus-visible{outline:2px solid var(--blue-60);outline-offset:0}
+
+.legend{list-style:none;padding:0;margin:0;display:grid;gap:12px}
+.legend li{display:flex;gap:12px;align-items:center}
+.swatches{display:flex;gap:6px;flex:0 0 auto}
+.sw{width:36px;height:36px;flex:0 0 36px;border:1px solid var(--gray-30);display:inline-flex;align-items:center;justify-content:center}
+.sw svg{width:28px;height:28px}
+.sw.sw-robot{background:#fff}
+.sw.sw-robot::after{content:"";width:14px;height:14px;border-radius:50%;background:var(--blue-60)}
+.sw.t-plain{background:#fff}
+.sw.t-rock{background:#e0e0e0}
+.sw.t-rain{background:repeating-linear-gradient(-45deg,#edf5ff 0 8px,#d0e2ff 8px 12px)}
+.sw.t-wind{background:#d9fbfb}
+
+.btn-primary{background:var(--blue-60);color:#fff;border:0;height:48px;padding:0 24px;font-size:16px}
+.btn-primary:hover{background:var(--blue-70)}
+.btn-secondary{background:#fff;color:var(--blue-60);border:2px solid var(--blue-60);height:48px;padding:0 22px;font-size:16px}
+.btn-secondary:hover{background:var(--blue-10)}
+.start-actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:8px}
+.actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+
+.hud{display:flex;gap:12px;align-items:stretch;margin-bottom:16px;flex-wrap:wrap}
+.stat{background:#fff;padding:12px 20px;flex:1;min-width:120px}
+.stat-wide{flex:2}
+.stat-label{display:block;font-size:12px;letter-spacing:.32px;text-transform:uppercase;color:var(--gray-70)}
+.stat-value{font-size:28px;font-weight:600;line-height:36px}
+.stat-text{font-size:20px;line-height:36px}
+
+.storm-text{margin:0 0 16px;font-weight:600}
+.board-wrap{display:flex;justify-content:center;width:100%}
+.board{position:relative;display:inline-block}
+/* Dark frame + 3px gaps make every tile edge visible */
+.tiles{display:grid;background:var(--gray-80);padding:3px;border:2px solid var(--gray-100)}
+.tile{position:relative;display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;overflow:hidden}
+.tile>svg{width:64%;height:64%;position:relative;z-index:1}
+.t-plain{background:#fff}
+.t-tree{background:#fff}
+.t-rock{background:#e0e0e0}
+.t-rain{background:repeating-linear-gradient(-45deg,#edf5ff 0 8px,#d0e2ff 8px 12px)}
+.t-wind{background:#d9fbfb}
+.t-depot{background:#d0e2ff}
+.t-house{background:#fcf4d6}
+.badge{position:relative;z-index:1;background:var(--blue-70);color:#fff;font-size:12px;font-weight:600;padding:1px 5px;line-height:16px}
+.tile-label{position:absolute;bottom:2px;left:0;right:0;text-align:center;font-size:10px;font-weight:600;line-height:1;color:var(--gray-100);z-index:1}
+.tile.trail::after{content:"";position:absolute;width:24%;height:24%;border-radius:50%;background:var(--blue-60);border:2px solid #fff;z-index:0}
+.tile.best{outline:3px dashed var(--purple-60);outline-offset:-5px}
+.robot{position:absolute;top:0;left:0;z-index:2;display:flex;align-items:center;justify-content:center;pointer-events:none;transition:transform .25s ease-out}
+.robot svg{width:68%;height:68%;margin-bottom:22%}
+
+/* Weather and move feedback */
+.pop-demo{display:inline-block;background:#fff;border:2px solid currentColor;padding:2px 8px;font-size:14px;font-weight:600;line-height:20px;white-space:nowrap}
+.pop-demo.good{color:var(--green-70)}
+.pop-demo.bad{color:var(--red-60)}
+.popup{position:absolute;z-index:5;pointer-events:none;transform:translateX(-50%);white-space:nowrap;background:#fff;border:2px solid currentColor;padding:2px 8px;font-size:14px;font-weight:600;line-height:20px;animation:popup 1.1s ease-out forwards}
+.popup.good{color:var(--green-70)}
+.popup.bad{color:var(--red-60)}
+@keyframes popup{0%{opacity:0;margin-top:14px}15%{opacity:1;margin-top:0}80%{opacity:1;margin-top:-10px}100%{opacity:0;margin-top:-26px}}
+.tile.t-rain::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,transparent 0 60%,rgba(15,98,254,.55) 60% 75%,transparent 75%) 0 0/100% 12px;animation:rainfall .5s linear infinite}
+@keyframes rainfall{from{background-position:0 0}to{background-position:0 12px}}
+.gust{display:flex;align-items:center;justify-content:center;position:relative;z-index:1;width:64%;height:64%}
+.gust svg{width:100%;height:100%;animation:gustmove 1s ease-in-out infinite}
+@keyframes gustmove{0%{transform:translateY(9px);opacity:.35}100%{transform:translateY(-9px);opacity:1}}
+.tile.flash-bad{animation:flashBad .8s ease-out}
+.tile.flash-good{animation:flashGood .5s ease-out}
+@keyframes flashBad{0%{box-shadow:inset 0 0 0 6px var(--red-60)}100%{box-shadow:inset 0 0 0 0 transparent}}
+@keyframes flashGood{0%{box-shadow:inset 0 0 0 4px var(--green-70)}100%{box-shadow:inset 0 0 0 0 transparent}}
+.robot.resist svg{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.map-key{font-size:14px;color:var(--gray-70);margin:12px 0 0}
+
+.controls{display:flex;flex-direction:column;align-items:center;gap:12px}
+.dpad{display:grid;grid-template-columns:repeat(3,56px);grid-template-rows:repeat(2,56px);gap:6px}
+.dpad button{background:#fff;border:2px solid var(--gray-50);font-size:20px;color:var(--gray-100);padding:0}
+.dpad button:hover{background:var(--gray-20)}
+.dpad button:active{background:var(--blue-10)}
+.dpad-up{grid-column:2;grid-row:1}
+.dpad-left{grid-column:1;grid-row:2}
+.dpad-down{grid-column:2;grid-row:2}
+.dpad-right{grid-column:3;grid-row:2}
+.msg{min-height:28px;margin:0;font-size:18px;text-align:center}
+.msg.good{color:var(--green-70);font-weight:600}
+.msg.bad{color:var(--red-60)}
+
+.city-list{list-style:none;padding:0;margin:0}
+.city-row{display:grid;grid-template-columns:1fr auto auto;gap:16px;align-items:center;padding:12px 0;border-bottom:1px solid var(--gray-20)}
+.city-stars{color:#b28600;font-size:20px;letter-spacing:2px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;text-align:center}
+.stats-grid .stat-value{font-size:36px}
+.summary-note{font-size:18px;margin:16px 0 0}
+
+@media (max-width:640px){
+  h1{font-size:32px;line-height:40px}
+  .dpad{grid-template-columns:repeat(3,64px);grid-template-rows:repeat(2,64px)}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important}
+}
+</style>
+</head>
+<body>
+
+<header class="app-bar">
+  <span class="brand">Storm Chaser Robot</span>
+  <span class="app-bar-right" id="app-bar-right"></span>
+</header>
+
+<main class="wrap">
+
+  <!-- START -->
+  <section id="screen-start" aria-labelledby="start-title">
+    <h1 id="start-title">Storm Chaser Robot</h1>
+    <p class="lead">Help the robot deliver packages through changing weather and around trees and rocks. Find the route with the fewest moves to earn all three stars.</p>
+
+    <div class="card">
+      <label class="field-label" for="robot-name">Name your robot</label>
+      <input class="text-input" id="robot-name" type="text" maxlength="12" value="Bolt" autocomplete="off">
+    </div>
+
+    <div class="card">
+      <h2>How to play</h2>
+      <ul class="legend">
+        <li><span class="sw sw-robot" aria-hidden="true"></span><span>Move one tile at a time with the <strong>arrow keys</strong> or <strong>W A S D</strong>.</span></li>
+        <li><span class="swatches" aria-hidden="true"><span class="sw t-tree"><svg viewBox="0 0 40 40"><rect x="17" y="26" width="6" height="11" fill="#6f4e37"/><circle cx="20" cy="17" r="11" fill="#198038" stroke="#0e4d22" stroke-width="2"/><circle cx="15" cy="14" r="3" fill="#42be65"/></svg></span><span class="sw t-rock"><svg viewBox="0 0 40 40"><path d="M6 30L10 16L18 9L28 11L35 20L33 31Z" fill="#8d8d8d" stroke="#525252" stroke-width="2" stroke-linejoin="round"/><path d="M14 17L18 13" stroke="#c6c6c6" stroke-width="2" stroke-linecap="round"/></svg></span></span><span><strong>Trees and rocks</strong> block the way. Walk around them.</span></li>
+        <li><span class="sw t-rain" aria-hidden="true"></span><span><strong>Rain</strong> makes the robot slow. Each step onto rain costs 2 moves.</span></li>
+        <li><span class="sw t-wind" aria-hidden="true"></span><span><strong>Wind</strong> blows the robot one tile in the arrow's direction. Moving against the arrow pushes through the gust: that step costs 2 moves, and the robot is not blown.</span></li>
+        <li><span class="swatches" aria-hidden="true"><span class="pop-demo good">+1</span><span class="pop-demo bad">+2 rain</span></span><span>Feedback: a green <strong>+1</strong> is a clean step. Red labels and flashes show what the weather cost you.</span></li>
+      </ul>
+    </div>
+
+    <div class="start-actions">
+      <button class="btn-primary" id="start-btn" type="button">Start first delivery</button>
+      <p class="muted">Best total stars: <strong id="best-stars">0</strong> / 18</p>
+    </div>
+  </section>
+
+  <!-- PLAY -->
+  <section id="screen-play" class="hidden" aria-label="Delivery game">
+    <div class="hud">
+      <div class="stat"><span class="stat-label">Moves</span><span id="hud-moves" class="stat-value">0</span></div>
+      <div class="stat"><span class="stat-label">Best possible</span><span id="hud-best" class="stat-value">?</span></div>
+      <div class="stat"><span class="stat-label">Delivery</span><span id="hud-delivery" class="stat-value">1 of 6</span></div>
+      <div class="stat stat-wide"><span class="stat-label">City</span><span id="hud-city" class="stat-text">Sunny Hills</span></div>
+    </div>
+
+    <div class="card">
+      <p id="storm-text" class="storm-text"></p>
+      <div class="board-wrap" id="board-wrap">
+        <div class="board" id="board">
+          <div class="tiles" id="tiles"></div>
+          <div class="robot" id="robot" aria-hidden="true"></div>
+        </div>
+      </div>
+      <p class="map-key">Blue dots show your route. The dashed outline shows the best route after a delivery.</p>
+    </div>
+
+    <div class="card controls">
+      <div class="dpad" role="group" aria-label="Move robot">
+        <button type="button" class="dpad-up" data-dir="0" aria-label="Move up">&#9650;</button>
+        <button type="button" class="dpad-left" data-dir="2" aria-label="Move left">&#9664;</button>
+        <button type="button" class="dpad-down" data-dir="1" aria-label="Move down">&#9660;</button>
+        <button type="button" class="dpad-right" data-dir="3" aria-label="Move right">&#9654;</button>
+      </div>
+      <p id="msg" class="msg" aria-live="polite"></p>
+      <div class="actions">
+        <button class="btn-secondary" id="restart-btn" type="button">Restart route</button>
+        <button class="btn-secondary hidden" id="best-toggle" type="button">Show best route</button>
+        <button class="btn-primary hidden" id="next-btn" type="button">Next delivery</button>
+      </div>
+    </div>
+    <p class="muted small">Keys: arrow keys or W, A, S, D</p>
+  </section>
+
+  <!-- SUMMARY -->
+  <section id="screen-summary" class="hidden" aria-labelledby="sum-title">
+    <h1 id="sum-title">All cities delivered!</h1>
+    <div class="card">
+      <div class="stats-grid">
+        <div><span class="stat-label">Stars</span><span id="sum-stars" class="stat-value">0</span></div>
+        <div><span class="stat-label">Perfect routes</span><span id="sum-perfect" class="stat-value">0</span></div>
+        <div><span class="stat-label">Total moves</span><span id="sum-moves" class="stat-value">0</span></div>
+      </div>
+      <p id="sum-note" class="summary-note"></p>
+    </div>
+    <div class="card">
+      <h2>Your deliveries</h2>
+      <ul class="city-list" id="city-list"></ul>
+    </div>
+    <div class="start-actions">
+      <button class="btn-primary" id="again-btn" type="button">Play again</button>
+      <button class="btn-secondary" id="home-btn" type="button">Back to start</button>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(() => {
+  const G = 3;      // gap between tiles, px (shows the gridlines)
+  const PAD = 3;    // frame padding around the tiles, px (matches .tiles CSS)
+  const DIRS = [
+    { name: 'up', dr: -1, dc: 0 },
+    { name: 'down', dr: 1, dc: 0 },
+    { name: 'left', dr: 0, dc: -1 },
+    { name: 'right', dr: 0, dc: 1 }
+  ];
+  const WIND_ROT = [0, 180, 270, 90];   // arrow rotation for up, down, left, right
+  const KEYS = { ArrowUp: 0, w: 0, W: 0, ArrowDown: 1, s: 1, S: 1, ArrowLeft: 2, a: 2, A: 2, ArrowRight: 3, d: 3, D: 3 };
+  const BLOCKED = new Set(['tree', 'rock']);
+  const CITIES = [
+    { name: 'Sunny Hills',      n: 5,  trees: 1, rocks: 1, rain: 0,  wind: 0 },
+    { name: 'Drizzle Bay',      n: 6,  trees: 2, rocks: 1, rain: 3,  wind: 0 },
+    { name: 'Gusty Valley',     n: 7,  trees: 3, rocks: 2, rain: 4,  wind: 3 },
+    { name: 'Storm Front City', n: 8,  trees: 5, rocks: 3, rain: 6,  wind: 4 },
+    { name: 'Thunder Town',     n: 9,  trees: 6, rocks: 4, rain: 8,  wind: 6 },
+    { name: 'Supercell Peaks',  n: 10, trees: 8, rocks: 6, rain: 10, wind: 8 }
+  ];
+  const BEST_KEY = 'storm-chaser-best';
+
+  const ICON = {
+    robot: '<svg viewBox="0 0 40 40" aria-hidden="true"><line x1="20" y1="3" x2="20" y2="9" stroke="#161616" stroke-width="2"/><circle cx="20" cy="3" r="2.5" fill="#da1e28"/><rect x="8" y="9" width="24" height="19" rx="3" fill="#fff" stroke="#161616" stroke-width="2"/><circle cx="15" cy="17" r="3" fill="#0f62fe"/><circle cx="25" cy="17" r="3" fill="#0f62fe"/><path d="M15 23H25" stroke="#161616" stroke-width="2" stroke-linecap="round"/><rect x="12" y="30" width="16" height="7" rx="2" fill="#c6c6c6" stroke="#161616" stroke-width="2"/></svg>',
+    depot: '<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="7" y="10" width="26" height="20" fill="#c49a6c" stroke="#161616" stroke-width="2"/><path d="M7 17H33" stroke="#161616" stroke-width="2"/><rect x="17" y="15" width="6" height="4" fill="#161616"/></svg>',
+    house: '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M4 19L20 5L36 19" fill="none" stroke="#da1e28" stroke-width="3" stroke-linejoin="round"/><rect x="10" y="19" width="20" height="16" fill="#fff" stroke="#161616" stroke-width="2"/><rect x="17" y="24" width="6" height="11" fill="#8a3800"/></svg>',
+    tree: '<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="17" y="26" width="6" height="11" fill="#6f4e37"/><circle cx="20" cy="17" r="11" fill="#198038" stroke="#0e4d22" stroke-width="2"/><circle cx="15" cy="14" r="3" fill="#42be65"/></svg>',
+    rock: '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M6 30L10 16L18 9L28 11L35 20L33 31Z" fill="#8d8d8d" stroke="#525252" stroke-width="2" stroke-linejoin="round"/><path d="M14 17L18 13" stroke="#c6c6c6" stroke-width="2" stroke-linecap="round"/></svg>'
+  };
+
+  const $ = id => document.getElementById(id);
+  const rand = n => Math.floor(Math.random() * n);
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = rand(i + 1);
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+  const plural = (k, word) => `${k} ${k === 1 ? word : word + 's'}`;
+
+  let S = { name: 'Bolt', idx: 0, results: [] };
+  let R = null;   // current round
+  let busy = false;      // true while a gust animation is playing
+  let blowTimer = null;
+  let best = 0;
+  try { best = Number(localStorage.getItem(BEST_KEY)) || 0; } catch (e) {}
+
+  /* ---------- Rules (one move, shared by play and the solver) ---------- */
+
+  // Returns where the robot ends up after pressing direction d from tile pos.
+  function step(g, pos, d) {
+    const { W, H, tiles, wind } = g;
+    const r = Math.floor(pos / W), c = pos % W;
+    const nr = r + DIRS[d].dr, nc = c + DIRS[d].dc;
+    if (nr < 0 || nr >= H || nc < 0 || nc >= W) return { to: pos, blocked: true, what: 'edge', cost: 0, events: [] };
+    const q = nr * W + nc;
+    if (BLOCKED.has(tiles[q])) return { to: pos, blocked: true, what: tiles[q], cost: 0, events: [] };
+
+    let to = q, cost = 1;
+    const events = [];
+    if (tiles[q] === 'rain') { cost += 1; events.push('rain'); }
+    if (tiles[q] === 'wind') {
+      const w = wind[q];
+      if (d === (w ^ 1)) {                     // pushing against the wind
+        cost += 1;
+        events.push('push');
+      } else {                                 // wind blows the robot downwind
+        const br = nr + DIRS[w].dr, bc = nc + DIRS[w].dc;
+        if (br >= 0 && br < H && bc >= 0 && bc < W && !BLOCKED.has(tiles[br * W + bc])) {
+          to = br * W + bc;
+          events.push('blown:' + DIRS[w].name);
+          if (tiles[to] === 'rain') { cost += 1; events.push('rain'); }
+        }
+      }
+    }
+    return { to, blocked: false, cost, events };
+  }
+
+  // Dijkstra over tiles: fewest total moves from depot to house.
+  function solve(g) {
+    const N = g.W * g.H, INF = 1e9;
+    const dist = new Array(N).fill(INF), prev = new Array(N).fill(-1), seen = new Array(N).fill(false);
+    dist[g.start] = 0;
+    for (let it = 0; it < N; it++) {
+      let u = -1;
+      for (let i = 0; i < N; i++) if (!seen[i] && dist[i] < INF && (u === -1 || dist[i] < dist[u])) u = i;
+      if (u === -1) break;
+      seen[u] = true;
+      if (u === g.goal) break;
+      for (let d = 0; d < 4; d++) {
+        const res = step(g, u, d);
+        if (res.blocked) continue;
+        const nd = dist[u] + res.cost;
+        if (nd < dist[res.to]) { dist[res.to] = nd; prev[res.to] = u; }
+      }
+    }
+    if (dist[g.goal] >= INF) return null;
+    const path = [];
+    for (let x = g.goal; x !== -1 && x !== g.start; x = prev[x]) path.unshift(x);
+    return { cost: dist[g.goal], path };
+  }
+
+  // Random map for a city. Retries until the house can be reached.
+  function generate(c) {
+    const W = c.n, H = c.n, N = W * H;
+    const start = (H - 1) * W, goal = W - 1;
+    for (let attempt = 0; attempt < 400; attempt++) {
+      const tiles = new Array(N).fill('plain');
+      const wind = new Array(N).fill(0);
+      const cells = shuffle([...Array(N).keys()].filter(i => i !== start && i !== goal));
+      let k = 0;
+      for (let i = 0; i < c.trees; i++) tiles[cells[k++]] = 'tree';
+      for (let i = 0; i < c.rocks; i++) tiles[cells[k++]] = 'rock';
+      for (let i = 0; i < c.rain; i++) tiles[cells[k++]] = 'rain';
+      for (let i = 0; i < c.wind; i++) { const idx = cells[k++]; tiles[idx] = 'wind'; wind[idx] = rand(4); }
+      const g = { W, H, tiles, wind, start, goal };
+      const sol = solve(g);
+      if (sol) return { g, opt: sol.cost, path: sol.path };
+    }
+    // Fallback: plain map (always solvable)
+    const tiles = new Array(N).fill('plain');
+    const g = { W, H, tiles, wind: new Array(N).fill(0), start, goal };
+    const sol = solve(g);
+    return { g, opt: sol.cost, path: sol.path };
+  }
+
+  function starsFor(moves, opt) {
+    if (moves === opt) return 3;
+    if (moves <= opt + 2) return 2;
+    return 1;
+  }
+
+  /* ---------- Rendering ---------- */
+
+  function tileSize() {
+    const avail = $('board-wrap').clientWidth;
+    const W = R.g.W;
+    return Math.max(28, Math.min(64, Math.floor((avail - 2 * PAD - (W - 1) * G - 8) / W)));
+  }
+
+  function render() {
+    const g = R.g, W = g.W, T = tileSize();
+    const tiles = $('tiles');
+    tiles.style.gridTemplateColumns = `repeat(${W}, ${T}px)`;
+    tiles.style.gridTemplateRows = `repeat(${g.H}, ${T}px)`;
+    tiles.style.gap = G + 'px';
+
+    const trail = new Set(R.trail);
+    const bestSet = new Set(R.path);
+    let html = '';
+    for (let i = 0; i < W * g.H; i++) {
+      const type = g.tiles[i];
+      const cls = ['tile'];
+      let inner = '';
+      if (i === g.start) { cls.push('t-depot'); inner = ICON.depot + '<span class="tile-label">Depot</span>'; }
+      else if (i === g.goal) { cls.push('t-house'); inner = ICON.house + '<span class="tile-label">House</span>'; }
+      else {
+        cls.push('t-' + type);
+        if (type === 'tree' || type === 'rock') inner = ICON[type];
+        else if (type === 'rain') inner = '<span class="badge">&times;2</span>';
+        else if (type === 'wind') inner = `<span class="gust" style="transform:rotate(${WIND_ROT[g.wind[i]]}deg)"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 5L32 20H25V35H15V20H8Z" fill="#005d5d"/></svg></span>`;
+      }
+      if (trail.has(i)) cls.push('trail');
+      if (R.done && R.showBest && bestSet.has(i)) cls.push('best');
+      html += `<div class="${cls.join(' ')}">${inner}</div>`;
+    }
+    tiles.innerHTML = html;
+
+    const robot = $('robot');
+    robot.style.width = T + 'px';
+    robot.style.height = T + 'px';
+    robot.innerHTML = ICON.robot;
+    const row = Math.floor(R.pos / W), col = R.pos % W;
+    robot.style.transform = `translate(${PAD + col * (T + G)}px, ${PAD + row * (T + G)}px)`;
+
+    $('hud-moves').textContent = R.moves;
+    $('hud-best').textContent = R.done ? R.opt : '?';
+  }
+
+  function say(text, kind) {
+    const m = $('msg');
+    m.textContent = text;
+    m.className = 'msg' + (kind ? ' ' + kind : '');
+  }
+
+  function showScreen(name) {
+    ['start', 'play', 'summary'].forEach(s => $('screen-' + s).classList.toggle('hidden', s !== name));
+    $('app-bar-right').textContent = name === 'play' && R ? R.city : '';
+    window.scrollTo(0, 0);
+  }
+
+  /* ---------- Game flow ---------- */
+
+  function startRound(regen) {
+    const c = CITIES[S.idx];
+    clearTimeout(blowTimer);
+    busy = false;
+    document.querySelectorAll('#board .popup').forEach(p => p.remove());
+    if (regen || !R) {
+      const gen = generate(c);
+      R = { g: gen.g, opt: gen.opt, path: gen.path, city: c.name };
+    }
+    Object.assign(R, { pos: R.g.start, moves: 0, trail: [], done: false, showBest: false });
+
+    $('hud-delivery').textContent = `${S.idx + 1} of ${CITIES.length}`;
+    $('hud-city').textContent = c.name;
+    $('app-bar-right').textContent = c.name;
+
+    const parts = [];
+    if (c.trees) parts.push(plural(c.trees, 'tree'));
+    if (c.rocks) parts.push(plural(c.rocks, 'rock'));
+    const obstacles = parts.join(' and ');
+    const weather = c.rain + c.wind > 0;
+    let text;
+    if (!weather) {
+      text = `Clear skies over ${c.name}.`;
+    } else {
+      text = `Storm alert in ${c.name}: ${plural(c.rain, 'rain cloud')} and ${plural(c.wind, 'wind gust')}.`;
+    }
+    if (obstacles) {
+      text += ` ${obstacles.charAt(0).toUpperCase() + obstacles.slice(1)} in the way: find the shortest route around them.`;
+    } else {
+      text += ' Find the shortest route to the house.';
+    }
+    if (weather) text += ' Plan your route before you move!';
+    $('storm-text').textContent = text;
+
+    $('next-btn').classList.add('hidden');
+    $('best-toggle').classList.add('hidden');
+    $('restart-btn').classList.remove('hidden');
+    say(`Help ${S.name} get the package from the depot to the house.`);
+
+    const robot = $('robot');
+    robot.style.transition = 'none';
+    render();
+    void robot.offsetHeight;
+    robot.style.transition = '';
+  }
+
+  function tileEl(i) { return document.querySelectorAll('#tiles .tile')[i]; }
+
+  // Moves the robot icon to tile i (used for the two-step wind blow)
+  function placeRobot(i) {
+    const W = R.g.W, T = tileSize();
+    const row = Math.floor(i / W), col = i % W;
+    $('robot').style.transform = `translate(${PAD + col * (T + G)}px, ${PAD + row * (T + G)}px)`;
+  }
+
+  // Floating label above tile i, e.g. "+1" (good) or "+2 rain" (bad)
+  function popup(i, text, kind) {
+    const W = R.g.W, T = tileSize();
+    const el = document.createElement('div');
+    el.className = 'popup ' + kind;
+    el.textContent = text;
+    el.style.left = (PAD + (i % W) * (T + G) + T / 2) + 'px';
+    el.style.top = (PAD + Math.floor(i / W) * (T + G) + 4) + 'px';
+    $('board').appendChild(el);
+    setTimeout(() => el.remove(), 1200);
+  }
+
+  // Briefly outlines tile i in green (good) or red (weather cost)
+  function flash(i, kind) {
+    const el = tileEl(i);
+    if (!el) return;
+    el.classList.remove('flash-good', 'flash-bad');
+    void el.offsetWidth;
+    el.classList.add(kind === 'good' ? 'flash-good' : 'flash-bad');
+  }
+
+  // Robot shakes when it pushes through a gust
+  function shake() {
+    const r = $('robot');
+    r.classList.remove('resist');
+    void r.offsetWidth;
+    r.classList.add('resist');
+  }
+
+  function tryMove(d) {
+    if (!R || R.done || busy) return;
+    const from = R.pos;
+    const res = step(R.g, from, d);
+    if (res.blocked) {
+      if (res.what === 'edge') say(`${S.name} can't leave the map. Try another way!`, 'bad');
+      else say(`${res.what === 'tree' ? 'A tree' : 'A rock'} is in the way. Try another path!`, 'bad');
+      return;
+    }
+    R.moves += res.cost;
+    R.pos = res.to;
+    R.trail.push(res.to);
+
+    const W = R.g.W;
+    const pushed = res.events.includes('push');
+    const rained = res.events.includes('rain');
+    const bl = res.events.find(e => e.startsWith('blown:'));
+    const blownDir = bl ? bl.split(':')[1] : '';
+    // The first tile the robot enters. For a gust blow, this is the wind tile itself.
+    const mid = (Math.floor(from / W) + DIRS[d].dr) * W + (from % W + DIRS[d].dc);
+
+    const msgs = [];
+    if (pushed) msgs.push('Pushing against the wind: this step costs 2 moves.');
+    if (bl) msgs.push(`The wind blew ${S.name} one tile ${blownDir}.`);
+    if (rained) msgs.push('Rain: this step costs 2 moves.');
+
+    render();
+
+    if (bl) {
+      // Show the robot hitting the gust, then slide it to where the wind put it
+      busy = true;
+      placeRobot(mid);
+      flash(mid, 'bad');
+      popup(mid, 'Gust!', 'bad');
+      blowTimer = setTimeout(() => {
+        placeRobot(res.to);
+        flash(res.to, 'bad');
+        popup(res.to, `Blown ${blownDir}${rained ? ', rain +1' : ''}`, 'bad');
+        busy = false;
+      }, 380);
+    } else if (pushed) {
+      flash(res.to, 'bad');
+      popup(res.to, '+2 push', 'bad');
+      shake();
+    } else if (rained) {
+      flash(res.to, 'bad');
+      popup(res.to, '+2 rain', 'bad');
+    } else {
+      popup(res.to, '+1', 'good');
+    }
+
+    if (R.pos === R.g.goal) {
+      finishRound(msgs.join(' '));
+    } else {
+      say(msgs.join(' '), msgs.length ? 'bad' : '');
+    }
+  }
+
+  function finishRound(prefix) {
+    R.done = true;
+    R.showBest = true;
+    const stars = starsFor(R.moves, R.opt);
+    S.results[S.idx] = { city: R.city, moves: R.moves, opt: R.opt, stars };
+
+    const last = S.idx === CITIES.length - 1;
+    $('next-btn').textContent = last ? 'See city summary' : 'Next delivery';
+    $('next-btn').classList.remove('hidden');
+    $('best-toggle').classList.remove('hidden');
+    $('best-toggle').textContent = 'Hide best route';
+    $('restart-btn').classList.add('hidden');
+
+    const stars3 = '\u2605'.repeat(stars) + '\u2606'.repeat(3 - stars);
+    say(`${prefix ? prefix + ' ' : ''}Delivered in ${R.moves} moves! Best possible: ${R.opt}. ${stars3}`, 'good');
+    render();
+    $('next-btn').focus();
+  }
+
+  function restartRoute() {
+    if (!R || R.done) return;
+    startRound(false);
+  }
+
+  function nextDelivery() {
+    S.idx++;
+    if (S.idx >= CITIES.length) showSummary();
+    else { showScreen('play'); startRound(true); }
+  }
+
+  function showSummary() {
+    const total = S.results.reduce((a, r) => a + r.stars, 0);
+    const perfect = S.results.filter(r => r.stars === 3).length;
+    const moves = S.results.reduce((a, r) => a + r.moves, 0);
+    if (total > best) {
+      best = total;
+      try { localStorage.setItem(BEST_KEY, String(best)); } catch (e) {}
+    }
+    $('sum-stars').textContent = `${total} / ${CITIES.length * 3}`;
+    $('sum-perfect').textContent = perfect;
+    $('sum-moves').textContent = moves;
+    $('sum-note').textContent = perfect === CITIES.length
+      ? `Perfect! ${S.name} found the shortest route every time.`
+      : `${S.name} saved every city. Try again to earn more perfect routes!`;
+    $('city-list').innerHTML = S.results.map((r, i) =>
+      `<li class="city-row"><span>${i + 1}. ${r.city}</span><span class="muted">${r.moves} moves (best ${r.opt})</span><span class="city-stars" aria-label="${r.stars} of 3 stars">${'\u2605'.repeat(r.stars)}${'\u2606'.repeat(3 - r.stars)}</span></li>`
+    ).join('');
+    showScreen('summary');
+  }
+
+  function startGame() {
+    const typed = ($('robot-name').value || '').trim().slice(0, 12);
+    S.name = typed || 'Bolt';
+    S.idx = 0;
+    S.results = [];
+    R = null;
+    showScreen('play');
+    startRound(true);
+  }
+
+  /* ---------- Setup ---------- */
+
+  function init() {
+    $('best-stars').textContent = best;
+    $('start-btn').addEventListener('click', startGame);
+    $('restart-btn').addEventListener('click', restartRoute);
+    $('next-btn').addEventListener('click', nextDelivery);
+    $('best-toggle').addEventListener('click', () => {
+      R.showBest = !R.showBest;
+      $('best-toggle').textContent = R.showBest ? 'Hide best route' : 'Show best route';
+      render();
+    });
+    $('again-btn').addEventListener('click', startGame);
+    $('home-btn').addEventListener('click', () => { $('best-stars').textContent = best; showScreen('start'); });
+
+    document.querySelectorAll('.dpad button').forEach(b =>
+      b.addEventListener('click', () => tryMove(Number(b.dataset.dir))));
+
+    document.addEventListener('keydown', e => {
+      if ($('screen-play').classList.contains('hidden')) return;
+      const d = KEYS[e.key];
+      if (d === undefined) return;
+      e.preventDefault();
+      if (e.repeat) return;
+      tryMove(d);
+    });
+
+    window.addEventListener('resize', () => {
+      if (R && !$('screen-play').classList.contains('hidden')) render();
+    });
+
+    showScreen('start');
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
