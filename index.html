@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Classroom Games</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gray-10:#f4f4f4; --gray-20:#e0e0e0; --gray-30:#c6c6c6; --gray-70:#525252; --gray-100:#161616;
+  --blue-10:#edf5ff; --blue-60:#0f62fe; --blue-70:#0043ce;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--gray-10);color:var(--gray-100);font-size:16px;line-height:1.5}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--blue-60);outline-offset:2px}
+.app-bar{background:var(--gray-100);color:#fff;height:48px;display:flex;align-items:center;padding:0 24px;font-weight:600}
+.wrap{max-width:880px;margin:0 auto;padding:32px 24px 48px}
+h1{font-size:40px;line-height:48px;font-weight:600;margin:0 0 8px}
+.lead{font-size:18px;color:var(--gray-70);margin:0 0 24px;max-width:640px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.game{display:flex;flex-direction:column;gap:8px;background:#fff;padding:24px;text-decoration:none;border:2px solid transparent}
+.game:hover{border-color:var(--blue-60)}
+.game:focus-visible{outline:2px solid var(--blue-60);outline-offset:2px}
+.tag{align-self:flex-start;font-size:12px;letter-spacing:.32px;text-transform:uppercase;font-weight:600;padding:4px 8px;color:#fff;background:var(--blue-60)}
+.game h2{font-size:24px;line-height:32px;font-weight:600;margin:4px 0 0}
+.game p{margin:0;color:var(--gray-70)}
+.go{margin-top:auto;padding-top:12px;color:var(--blue-60);font-weight:600}
+.note{margin-top:24px;font-size:14px;color:var(--gray-70)}
+</style>
+</head>
+<body>
+<header class="app-bar">Classroom Games</header>
+<main class="wrap">
+  <h1>Choose a game</h1>
+  <p class="lead">Each game runs in the Chrome browser on any Chromebook. No install needed.</p>
+
+  <div class="grid">
+    <a class="game" href="rocket-pizza-math/">
+      <span class="tag">Math</span>
+      <h2>Rocket Pizza Math</h2>
+      <p>Answer times tables to fuel the rocket, or name the shaded fraction on the astronauts' pizza.</p>
+      <span class="go">Play Rocket Pizza Math &rarr;</span>
+    </a>
+
+    <a class="game" href="storm-chaser-robot/">
+      <span class="tag">Math and logic</span>
+      <h2>Storm Chaser Robot</h2>
+      <p>Guide the robot to the house with arrow keys or WASD. Plan around trees, rocks, rain and wind to find the shortest route.</p>
+      <span class="go">Play Storm Chaser Robot &rarr;</span>
+    </a>
+  </div>
+
+  <p class="note">Best scores are saved on the device you play on.</p>
+</main>
+</body>
+</html>
