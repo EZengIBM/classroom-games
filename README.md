@@ -16,7 +16,7 @@ This site has two games for 3rd grade. Start on the home page and choose a game.
    - **Rocket Math:** multiplication questions.
    - **Pizza Fractions:** fraction questions about a pizza.
 2. For Rocket Math, pick the times tables to practice (0s to 12s). Click **Clear all** or **Select all** to change them quickly. Pizza Fractions does not use this setting.
-   For Pizza Fractions, choose the question type: **Name it** (name the shaded fraction), **Simplify it** (write a fraction in simplest form), or **Mix** of both. Rocket Math does not use this setting.
+   For Pizza Fractions, pick the pizza slice counts to practice (2 to 12; the bottom number of the fraction), using the same **Clear all** / **Select all** button. Then choose the question type: **Name it** (name the shaded fraction, from 0 slices shaded up to all of them), **Simplify it** (write a fraction in simplest form), or **Mix** of both. Simplify questions only use slice counts that can be simplified (4, 6, 8, 9, 10, 12). If none of those are chosen, you get Name it questions instead. Rocket Math does not use these settings.
 3. Click **Start game**.
 4. Answer by clicking an answer, or by pressing **1**, **2**, **3**, or **4** on the keyboard.
 5. Click **Next question**, or press **Enter**, to keep going.
@@ -26,9 +26,10 @@ This site has two games for 3rd grade. Start on the home page and choose a game.
 ### Scoring
 
 - Each correct answer earns **10 points**.
-- **Speed bonus:** a timer bar counts down from 10 seconds. Answering right away earns up to **10 extra points**, and the bonus shrinks to 0 by 10 seconds. Both games use the timer.
+- **Timer:** every question has 10 seconds. The seconds left show above the question next to a shrinking bar, and turn red in the last 3 seconds. **If time runs out, the question counts as wrong** and the right answer is shown. Both games use the timer.
+- **Speed bonus:** answering right away earns up to **10 extra points**, and the bonus shrinks to 0 as the timer runs down.
 - Once you have **3 correct answers in a row**, each correct answer earns an extra **5 points**.
-- A wrong answer ends your streak. The fuel you have already earned stays in the tank.
+- A wrong answer, or running out of time, ends your streak. The fuel you have already earned stays in the tank.
 - Your best score is saved on the device you are using.
 
 ---

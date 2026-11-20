@@ -97,6 +97,8 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
 .timer{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 12px;margin-bottom:16px;text-align:left}
 .timer-label{font-size:12px;letter-spacing:.32px;text-transform:uppercase;color:var(--gray-70)}
 .timer-bonus{font-weight:600;font-size:20px;color:var(--orange-70)}
+.timer-secs{font-weight:600;font-size:28px;line-height:32px}
+.timer-secs.low{color:var(--red-60)}
 .timer-track{grid-column:1 / -1;height:8px;background:var(--gray-20)}
 .timer-fill{height:100%;width:100%;background:var(--orange-40)}
 
@@ -166,6 +168,11 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
 
     <div class="card" id="frac-card">
       <fieldset>
+        <legend>Pizza slices (bottom number) to practice</legend>
+        <div class="chip-row" id="denom-chips"></div>
+        <button type="button" class="btn-ghost" id="toggle-denoms">Clear all</button>
+      </fieldset>
+      <fieldset style="margin-top:16px">
         <legend>Fraction questions</legend>
         <div class="mode-grid three">
           <label class="mode-card">
@@ -187,7 +194,7 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
       </fieldset>
     </div>
 
-    <p id="start-warning" class="warning hidden" role="alert">Pick at least one times table.</p>
+    <p id="start-warning" class="warning hidden" role="alert"></p>
     <div class="start-actions">
       <button class="btn-primary" id="start-btn" type="button">Start game</button>
       <p class="muted">Best score on this device: <strong id="best-score">0</strong></p>
@@ -210,10 +217,12 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
     </div>
 
     <div class="card question-card">
-      <div class="timer" aria-hidden="true">
+      <div class="timer">
+        <span class="timer-label">Time left</span>
+        <span class="timer-secs" id="timer-secs">10s</span>
+        <div class="timer-track" aria-hidden="true"><div class="timer-fill" id="timer-fill"></div></div>
         <span class="timer-label">Speed bonus</span>
         <span class="timer-bonus" id="timer-bonus">+10</span>
-        <div class="timer-track"><div class="timer-fill" id="timer-fill"></div></div>
       </div>
       <span class="tag tag-blue" id="q-tag">Rocket Math</span>
       <div id="q-visual"></div>
@@ -270,8 +279,8 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
 (() => {
   const FUEL_GOAL = 5;
   const TABLES = [0,1,2,3,4,5,6,7,8,9,10,11,12];
-  const DENOMS = [2,3,4,5,6,8,10,12];
-  const TIME_LIMIT = 10000;       // ms until the speed bonus reaches 0
+  const DENOMS = [2,3,4,5,6,7,8,9,10,11,12];   // pizza slice counts (0 slices is not possible)
+  const TIME_LIMIT = 10000;       // ms to answer; at 0 the question counts as wrong
   const MAX_SPEED_BONUS = 10;     // points for an instant answer
   const PRAISE = ['Blast-tastic!','Right on target!','Super math!','Out of this world!','Pizza perfect!','Great thinking!'];
   const BEST_KEY = 'rocket-pizza-math-best';
@@ -288,7 +297,7 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
   };
 
   const S = {
-    mode: 'rocket', fracType: 'mix', tables: new Set(TABLES), qStart: 0, timerId: null,
+    mode: 'rocket', fracType: 'mix', tables: new Set(TABLES), denoms: new Set(DENOMS), qStart: 0, timerId: null,
     score: 0, launches: 0, fuel: 0, streak: 0, bestStreak: 0,
     correct: 0, total: 0, q: null, answered: false, pendingLaunch: false, best: 0
   };
@@ -327,27 +336,41 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
     return a * d === c * b;
   }
 
+  // Every (shaded, total) pair the student can be asked to simplify, using the chosen slice counts
+  function simplifyOptions() {
+    const opts = [];
+    for (const d of S.denoms) {
+      for (let n = 1; n < d; n++) {
+        const k = gcd(n, d);
+        if (k > 1) opts.push([n / k, d / k, k]);
+      }
+    }
+    return opts;
+  }
+
   function makeFractionQuestion() {
-    const type = S.fracType === 'mix' ? pick(['name', 'simplify']) : S.fracType;
+    let type = S.fracType === 'mix' ? pick(['name', 'simplify']) : S.fracType;
+    // Slice counts like 2, 3, 5, 7 or 11 have nothing to simplify, so ask "Name it" instead
+    if (type === 'simplify' && simplifyOptions().length === 0) type = 'name';
     return type === 'simplify' ? makeSimplifyQuestion() : makeNameQuestion();
   }
 
   function makeNameQuestion() {
-    const d = pick(DENOMS);
-    const n = randInt(1, d - 1);
+    const d = pick([...S.denoms]);
+    const n = randInt(0, d);                       // 0 shaded up to all shaded
     const ans = `${n}/${d}`;
     const cands = [];
-    if (n + 1 < d) cands.push(`${n + 1}/${d}`);
-    if (n - 1 >= 1) cands.push(`${n - 1}/${d}`);
+    if (n + 1 <= d) cands.push(`${n + 1}/${d}`);
+    if (n - 1 >= 0) cands.push(`${n - 1}/${d}`);
     if (n > 1) cands.push(`${d}/${n}`);            // flipped: a common mix-up
-    for (const dd of DENOMS) if (dd !== d && n < dd) cands.push(`${n}/${dd}`);
+    for (const dd of S.denoms) if (dd !== d && n <= dd) cands.push(`${n}/${dd}`);
     const pool = new Set();
     for (const c of shuffle(cands)) {
       if (!sameValue(c, ans) && pool.size < 3) pool.add(c);
     }
-    while (pool.size < 3) {
+    while (pool.size < 3) {                         // fall back to any pizza size so this always ends
       const dd = pick(DENOMS);
-      const nn = randInt(1, dd - 1);
+      const nn = randInt(0, dd);
       const c = `${nn}/${dd}`;
       if (!sameValue(c, ans)) pool.add(c);
     }
@@ -356,15 +379,7 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
   }
 
   function makeSimplifyQuestion() {
-    // Every simplest-form fraction a/b (b up to 6) that has a bigger equal fraction n/d with d up to 12
-    const opts = [];
-    for (let b = 2; b <= 6; b++) {
-      for (let a = 1; a < b; a++) {
-        if (gcd(a, b) !== 1) continue;
-        for (let k = 2; b * k <= 12; k++) opts.push([a, b, k]);
-      }
-    }
-    const [a, b, k] = pick(opts);
+    const [a, b, k] = pick(simplifyOptions());
     const n = a * k, d = b * k;
     const ans = `${a}/${b}`;
     const notSimplest = `${n}/${d}`;               // equal in value, but not simplest: a common mix-up
@@ -377,8 +392,8 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
       if (!sameValue(c, ans) && pool.size < 3) pool.add(c);
     }
     while (pool.size < 3) {
-      const [a2, b2] = pick(opts);
-      const c = `${a2}/${b2}`;
+      const b2 = pick(DENOMS);
+      const c = `${randInt(1, b2 - 1)}/${b2}`;
       if (!sameValue(c, ans)) pool.add(c);
     }
     return makeQuestion('simplify', `Simplify ${n}/${d} as far as you can.`, ans, [...pool],
@@ -481,8 +496,12 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
 
   function tickTimer() {
     const ms = performance.now() - S.qStart;
+    const secs = Math.max(0, Math.ceil((TIME_LIMIT - ms) / 1000));
+    $('timer-secs').textContent = secs + 's';
+    $('timer-secs').classList.toggle('low', secs <= 3);
     $('timer-bonus').textContent = '+' + speedBonus(ms);
     $('timer-fill').style.width = (Math.max(0, 1 - ms / TIME_LIMIT) * 100) + '%';
+    if (ms >= TIME_LIMIT && !S.answered) answer(-1, true);   // out of time counts as wrong
   }
 
   function startTimer() {
@@ -496,8 +515,16 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
     const mode = document.querySelector('input[name=mode]:checked').value;
     S.fracType = document.querySelector('input[name=ftype]:checked').value;
     S.tables = new Set([...document.querySelectorAll('#table-chips input:checked')].map(x => Number(x.value)));
-    if (mode !== 'pizza' && S.tables.size === 0) {
-      $('start-warning').classList.remove('hidden');
+    S.denoms = new Set([...document.querySelectorAll('#denom-chips input:checked')].map(x => Number(x.value)));
+    const warn = $('start-warning');
+    if (mode === 'rocket' && S.tables.size === 0) {
+      warn.textContent = 'Pick at least one times table.';
+      warn.classList.remove('hidden');
+      return;
+    }
+    if (mode === 'pizza' && S.denoms.size === 0) {
+      warn.textContent = 'Pick at least one pizza slice count.';
+      warn.classList.remove('hidden');
       return;
     }
     $('start-warning').classList.add('hidden');
@@ -518,7 +545,7 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
     startTimer();
   }
 
-  function answer(i) {
+  function answer(i, timedOut) {
     if (S.answered || !S.q) return;
     S.answered = true;
     const elapsed = performance.now() - S.qStart;
@@ -547,7 +574,7 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
       fb.className = 'feedback good';
     } else {
       S.streak = 0;
-      fb.textContent = `Not quite. ${q.explain}`;
+      fb.textContent = `${timedOut ? "Time's up!" : 'Not quite.'} ${q.explain}`;
       fb.className = 'feedback bad';
     }
 
@@ -613,6 +640,14 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
       chips.appendChild(l);
     });
 
+    const dchips = $('denom-chips');
+    DENOMS.forEach(n => {
+      const l = document.createElement('label');
+      l.className = 'chip';
+      l.innerHTML = `<input type="checkbox" value="${n}" checked><span>${n}</span>`;
+      dchips.appendChild(l);
+    });
+
     buildFuelSegments();
     $('best-score').textContent = S.best;
 
@@ -628,6 +663,13 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
       const allOn = boxes.every(b => b.checked);
       boxes.forEach(b => { b.checked = !allOn; });
       $('toggle-all').textContent = allOn ? 'Select all' : 'Clear all';
+    });
+
+    $('toggle-denoms').addEventListener('click', () => {
+      const boxes = [...document.querySelectorAll('#denom-chips input')];
+      const allOn = boxes.every(b => b.checked);
+      boxes.forEach(b => { b.checked = !allOn; });
+      $('toggle-denoms').textContent = allOn ? 'Select all' : 'Clear all';
     });
 
     const updateSettings = () => {
