@@ -148,7 +148,7 @@ h2{font-size:20px;line-height:28px;font-weight:600;margin:0 0 12px}
   <!-- START -->
   <section id="screen-start" aria-labelledby="start-title">
     <h1 id="start-title">Storm Chaser Robot</h1>
-    <p class="lead">Help the robot deliver packages through changing weather and around trees and rocks. Find the route with the fewest moves to earn all three stars.</p>
+    <p class="lead">Help the robot deliver packages through changing weather and around trees and rocks. Find the route with the fewest moves. If a shorter route exists, you get to try again!</p>
 
     <div class="card">
       <label class="field-label" for="robot-name">Name your robot</label>
@@ -202,6 +202,7 @@ h2{font-size:20px;line-height:28px;font-weight:600;margin:0 0 12px}
       <p id="msg" class="msg" aria-live="polite"></p>
       <div class="actions">
         <button class="btn-secondary" id="restart-btn" type="button">Restart route</button>
+        <button class="btn-secondary hidden" id="giveup-btn" type="button">Give up and see best route</button>
         <button class="btn-secondary hidden" id="best-toggle" type="button">Show best route</button>
         <button class="btn-primary hidden" id="next-btn" type="button">Next delivery</button>
       </div>
@@ -254,6 +255,7 @@ h2{font-size:20px;line-height:28px;font-weight:600;margin:0 0 12px}
     { name: 'Supercell Peaks',  n: 10, trees: 8, rocks: 6, rain: 10, wind: 8 }
   ];
   const BEST_KEY = 'storm-chaser-best';
+  const GIVE_UP_AFTER = 3;   // failed tries before "Give up and see best route" appears
 
   const ICON = {
     robot: '<svg viewBox="0 0 40 40" aria-hidden="true"><line x1="20" y1="3" x2="20" y2="9" stroke="#161616" stroke-width="2"/><circle cx="20" cy="3" r="2.5" fill="#da1e28"/><rect x="8" y="9" width="24" height="19" rx="3" fill="#fff" stroke="#161616" stroke-width="2"/><circle cx="15" cy="17" r="3" fill="#0f62fe"/><circle cx="25" cy="17" r="3" fill="#0f62fe"/><path d="M15 23H25" stroke="#161616" stroke-width="2" stroke-linecap="round"/><rect x="12" y="30" width="16" height="7" rx="2" fill="#c6c6c6" stroke="#161616" stroke-width="2"/></svg>',
@@ -360,10 +362,11 @@ h2{font-size:20px;line-height:28px;font-weight:600;margin:0 0 12px}
     return { g, opt: sol.cost, path: sol.path };
   }
 
-  function starsFor(moves, opt) {
-    if (moves === opt) return 3;
-    if (moves <= opt + 2) return 2;
-    return 1;
+  // Stars come from the student's best attempt. Each retry takes one star off the top:
+  // shortest route on try 1 = 3 stars, on try 2 = 2 stars, on try 3 or later = 1 star.
+  function starsFor(moves, opt, attempts) {
+    const fromMoves = moves === opt ? 3 : moves <= opt + 2 ? 2 : 1;
+    return Math.min(fromMoves, Math.max(1, 4 - attempts));
   }
 
   /* ---------- Rendering ---------- */
@@ -434,9 +437,9 @@ h2{font-size:20px;line-height:28px;font-weight:600;margin:0 0 12px}
     document.querySelectorAll('#board .popup').forEach(p => p.remove());
     if (regen || !R) {
       const gen = generate(c);
-      R = { g: gen.g, opt: gen.opt, path: gen.path, city: c.name };
+      R = { g: gen.g, opt: gen.opt, path: gen.path, city: c.name, attempts: 1, bestMoves: Infinity };
     }
-    Object.assign(R, { pos: R.g.start, moves: 0, trail: [], done: false, showBest: false });
+    Object.assign(R, { pos: R.g.start, moves: 0, trail: [], done: false, over: false, showBest: false });
 
     $('hud-delivery').textContent = `${S.idx + 1} of ${CITIES.length}`;
     $('hud-city').textContent = c.name;
@@ -463,8 +466,12 @@ h2{font-size:20px;line-height:28px;font-weight:600;margin:0 0 12px}
 
     $('next-btn').classList.add('hidden');
     $('best-toggle').classList.add('hidden');
+    $('giveup-btn').classList.add('hidden');
     $('restart-btn').classList.remove('hidden');
-    say(`Help ${S.name} get the package from the depot to the house.`);
+    $('restart-btn').textContent = 'Restart route';
+    say(R.attempts > 1
+      ? `Try ${R.attempts}: can you find a shorter route for ${S.name}?`
+      : `Help ${S.name} get the package from the depot to the house.`);
 
     const robot = $('robot');
     robot.style.transition = 'none';
@@ -512,7 +519,7 @@ h2{font-size:20px;line-height:28px;font-weight:600;margin:0 0 12px}
   }
 
   function tryMove(d) {
-    if (!R || R.done || busy) return;
+    if (!R || R.done || R.over || busy) return;
     const from = R.pos;
     const res = step(R.g, from, d);
     if (res.blocked) {
@@ -570,10 +577,25 @@ h2{font-size:20px;line-height:28px;font-weight:600;margin:0 0 12px}
   }
 
   function finishRound(prefix) {
+    R.bestMoves = Math.min(R.bestMoves, R.moves);
+    const pre = prefix ? prefix + ' ' : '';
+    if (R.moves === R.opt) {
+      completeRound(pre, false);
+      return;
+    }
+    // Not the shortest route: keep the answer hidden and let the student try again
+    R.over = true;
+    $('restart-btn').textContent = 'Try again';
+    $('giveup-btn').classList.toggle('hidden', R.attempts < GIVE_UP_AFTER);
+    say(`${pre}Delivered in ${R.moves} moves, but a shorter route exists. Try again!`, 'bad');
+    $('restart-btn').focus();
+  }
+
+  function completeRound(pre, gaveUp) {
     R.done = true;
     R.showBest = true;
-    const stars = starsFor(R.moves, R.opt);
-    S.results[S.idx] = { city: R.city, moves: R.moves, opt: R.opt, stars };
+    const stars = starsFor(R.bestMoves, R.opt, R.attempts);
+    S.results[S.idx] = { city: R.city, moves: R.bestMoves, opt: R.opt, stars };
 
     const last = S.idx === CITIES.length - 1;
     $('next-btn').textContent = last ? 'See city summary' : 'Next delivery';
@@ -581,15 +603,25 @@ h2{font-size:20px;line-height:28px;font-weight:600;margin:0 0 12px}
     $('best-toggle').classList.remove('hidden');
     $('best-toggle').textContent = 'Hide best route';
     $('restart-btn').classList.add('hidden');
+    $('giveup-btn').classList.add('hidden');
 
     const stars3 = '\u2605'.repeat(stars) + '\u2606'.repeat(3 - stars);
-    say(`${prefix ? prefix + ' ' : ''}Delivered in ${R.moves} moves! Best possible: ${R.opt}. ${stars3}`, 'good');
+    const tries = R.attempts > 1 ? ` It took ${R.attempts} tries.` : '';
+    say(gaveUp
+      ? `The shortest route is ${R.opt} moves. Your best was ${R.bestMoves}. ${stars3}`
+      : `${pre}Delivered in ${R.moves} moves, the shortest route!${tries} ${stars3}`, 'good');
     render();
     $('next-btn').focus();
   }
 
+  function giveUp() {
+    if (!R || R.done || !R.over) return;
+    completeRound('', true);
+  }
+
   function restartRoute() {
     if (!R || R.done) return;
+    if (R.over) R.attempts++;     // a new try after finishing with a longer route
     startRound(false);
   }
 
@@ -635,6 +667,7 @@ h2{font-size:20px;line-height:28px;font-weight:600;margin:0 0 12px}
     $('best-stars').textContent = best;
     $('start-btn').addEventListener('click', startGame);
     $('restart-btn').addEventListener('click', restartRoute);
+    $('giveup-btn').addEventListener('click', giveUp);
     $('next-btn').addEventListener('click', nextDelivery);
     $('best-toggle').addEventListener('click', () => {
       R.showBest = !R.showBest;

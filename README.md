@@ -47,9 +47,12 @@ This site has two games for 3rd grade. Start on the home page and choose a game.
 3. Move one square per press with the **arrow keys** or **W, A, S, D**. You can also click the arrow buttons.
 4. Trees and rocks block the way. The robot cannot move into them or off the edge of the map.
 5. Watch the **Moves** counter. Plan your route before you move.
-6. When the robot reaches the house, click **Next delivery**.
-7. Click **Restart route** to start the current delivery over.
-8. After a delivery, click **Show best route** to see the shortest route for that city.
+6. When the robot reaches the house, the game checks your move count.
+   - If you used the **fewest possible moves**, you pass. Click **Next delivery**.
+   - If a shorter route exists, the game does **not** show the answer or the best number. It says to try again. Click **Try again** to restart the same map and find a better route.
+7. Click **Restart route** at any time to start the current delivery over. This does not count as a failed try.
+8. After **3 tries** that did not find the shortest route, a **Give up and see best route** button appears. Click it to see the shortest route, then continue.
+9. After you pass or give up, click **Show best route** to see the shortest route for that city.
 
 ### Weather
 
@@ -67,9 +70,11 @@ This site has two games for 3rd grade. Start on the home page and choose a game.
 
 ### Stars
 
-- **3 stars:** your route used the fewest possible moves.
-- **2 stars:** you were within 2 moves of the fewest possible.
-- **1 star:** you took more than 2 extra moves.
+Stars depend on how many tries it took to find the shortest route:
+
+- **3 stars:** you found the shortest route on your first try.
+- **2 stars:** you found it on your second try.
+- **1 star:** you needed three or more tries, or you gave up.
 
 There are 18 stars in total (3 for each of the six cities). Your best total is saved on the device you are using.
 
@@ -78,4 +83,5 @@ There are 18 stars in total (3 for each of the six cities). Your best total is s
 ## Notes for teachers
 
 - Scores are saved in each browser, so they stay on the device where the game was played.
-- Ask students to predict the shortest route before they move. Then compare their move count with the **Best possible** number.
+- Ask students to predict the shortest route before they move. If their route is longer than the shortest, the game asks them to try again without revealing the answer, so they can keep reasoning about weather costs and obstacles.
+- The **Best possible** number and the best route are only shown after a student finds the shortest route or gives up.
