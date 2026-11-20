@@ -40,6 +40,7 @@ fieldset{border:0;margin:0;padding:0;min-width:0}
 legend{font-weight:600;margin-bottom:12px;padding:0}
 
 .mode-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.mode-grid.three{grid-template-columns:repeat(3,1fr)}
 .mode-card{position:relative;display:flex;flex-direction:column;gap:4px;padding:16px;border:2px solid var(--gray-30);background:#fff;cursor:pointer}
 .mode-card input{position:absolute;opacity:0;pointer-events:none}
 .mode-card:has(input:checked){border-color:var(--blue-60);background:var(--blue-10)}
@@ -93,6 +94,12 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
 .feedback.good{color:var(--green-70)}
 .feedback.bad{color:var(--red-60)}
 
+.timer{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 12px;margin-bottom:16px;text-align:left}
+.timer-label{font-size:12px;letter-spacing:.32px;text-transform:uppercase;color:var(--gray-70)}
+.timer-bonus{font-weight:600;font-size:20px;color:var(--orange-70)}
+.timer-track{grid-column:1 / -1;height:8px;background:var(--gray-20)}
+.timer-fill{height:100%;width:100%;background:var(--orange-40)}
+
 .overlay{position:fixed;inset:0;background:rgba(22,22,22,.7);display:flex;align-items:center;justify-content:center;padding:24px;z-index:10}
 .overlay-card{background:#fff;padding:32px;max-width:420px;width:100%;text-align:center}
 .rocket-stage{height:170px;display:flex;justify-content:center;align-items:flex-end;overflow:hidden}
@@ -107,7 +114,7 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
 .summary-note{font-size:18px;margin:16px 0 0}
 
 @media (max-width:640px){
-  .mode-grid{grid-template-columns:1fr}
+  .mode-grid,.mode-grid.three{grid-template-columns:1fr}
   h1{font-size:32px;line-height:40px}
   .prompt{font-size:28px}
   .choice{font-size:26px;min-height:72px}
@@ -129,7 +136,7 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
   <!-- START SCREEN -->
   <section id="screen-start" aria-labelledby="start-title">
     <h1 id="start-title">Rocket Pizza Math</h1>
-    <p class="lead">Answer times tables to fuel the rocket and fractions to slice the astronauts' pizza. Every 5 correct answers makes one launch.</p>
+    <p class="lead">Answer times tables to fuel the rocket and fractions to slice the astronauts' pizza. Every 5 correct answers makes one launch. Answer fast to earn bonus points!</p>
 
     <div class="card">
       <fieldset>
@@ -157,6 +164,29 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
       </fieldset>
     </div>
 
+    <div class="card" id="frac-card">
+      <fieldset>
+        <legend>Fraction questions</legend>
+        <div class="mode-grid three">
+          <label class="mode-card">
+            <input type="radio" name="ftype" value="name">
+            <span class="mode-title">Name it</span>
+            <span class="mode-desc">Name the shaded fraction</span>
+          </label>
+          <label class="mode-card">
+            <input type="radio" name="ftype" value="simplify">
+            <span class="mode-title">Simplify it</span>
+            <span class="mode-desc">Write it in simplest form</span>
+          </label>
+          <label class="mode-card">
+            <input type="radio" name="ftype" value="mix" checked>
+            <span class="mode-title">Mix</span>
+            <span class="mode-desc">Both kinds</span>
+          </label>
+        </div>
+      </fieldset>
+    </div>
+
     <p id="start-warning" class="warning hidden" role="alert">Pick at least one times table.</p>
     <div class="start-actions">
       <button class="btn-primary" id="start-btn" type="button">Start game</button>
@@ -180,6 +210,11 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
     </div>
 
     <div class="card question-card">
+      <div class="timer" aria-hidden="true">
+        <span class="timer-label">Speed bonus</span>
+        <span class="timer-bonus" id="timer-bonus">+10</span>
+        <div class="timer-track"><div class="timer-fill" id="timer-fill"></div></div>
+      </div>
       <span class="tag tag-blue" id="q-tag">Rocket Math</span>
       <div id="q-visual"></div>
       <p id="q-prompt" class="prompt" aria-live="polite"></p>
@@ -234,8 +269,10 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
 <script>
 (() => {
   const FUEL_GOAL = 5;
-  const TABLES = [2,3,4,5,6,7,8,9,10];
-  const DENOMS = [2,3,4,6,8];
+  const TABLES = [0,1,2,3,4,5,6,7,8,9,10,11,12];
+  const DENOMS = [2,3,4,5,6,8,10,12];
+  const TIME_LIMIT = 10000;       // ms until the speed bonus reaches 0
+  const MAX_SPEED_BONUS = 10;     // points for an instant answer
   const PRAISE = ['Blast-tastic!','Right on target!','Super math!','Out of this world!','Pizza perfect!','Great thinking!'];
   const BEST_KEY = 'rocket-pizza-math-best';
 
@@ -251,7 +288,7 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
   };
 
   const S = {
-    mode: 'rocket', tables: new Set(TABLES),
+    mode: 'rocket', fracType: 'mix', tables: new Set(TABLES), qStart: 0, timerId: null,
     score: 0, launches: 0, fuel: 0, streak: 0, bestStreak: 0,
     correct: 0, total: 0, q: null, answered: false, pendingLaunch: false, best: 0
   };
@@ -266,23 +303,36 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
 
   function makeRocketQuestion() {
     const t = pick([...S.tables]);
-    const other = randInt(1, 10);
+    const other = randInt(0, 12);
     const [a, b] = Math.random() < 0.5 ? [t, other] : [other, t];
     const ans = a * b;
     const wrong = new Set();
     const candidates = shuffle([ans + t, ans - t, ans + 1, ans - 1, (a + 1) * b, a * (b + 1), (a - 1) * b, a * (b - 1), ans + 10, ans - 10]);
     for (const c of candidates) {
-      if (c > 0 && c !== ans && wrong.size < 3) wrong.add(c);
+      if (c >= 0 && c !== ans && wrong.size < 3) wrong.add(c);
     }
     while (wrong.size < 3) {
       const c = ans + randInt(-9, 9);
-      if (c > 0 && c !== ans) wrong.add(c);
+      if (c >= 0 && c !== ans) wrong.add(c);
     }
     return makeQuestion('rocket', `${a} × ${b} = ?`, String(ans), [...wrong].map(String), null,
       `${a} × ${b} = ${ans}.`);
   }
 
+  const gcd = (a, b) => b ? gcd(b, a % b) : a;
+  // True when two "n/d" strings are equal in value (e.g. 1/2 and 4/8)
+  function sameValue(x, y) {
+    const [a, b] = x.split('/').map(Number);
+    const [c, d] = y.split('/').map(Number);
+    return a * d === c * b;
+  }
+
   function makeFractionQuestion() {
+    const type = S.fracType === 'mix' ? pick(['name', 'simplify']) : S.fracType;
+    return type === 'simplify' ? makeSimplifyQuestion() : makeNameQuestion();
+  }
+
+  function makeNameQuestion() {
     const d = pick(DENOMS);
     const n = randInt(1, d - 1);
     const ans = `${n}/${d}`;
@@ -293,16 +343,46 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
     for (const dd of DENOMS) if (dd !== d && n < dd) cands.push(`${n}/${dd}`);
     const pool = new Set();
     for (const c of shuffle(cands)) {
-      if (c !== ans && pool.size < 3) pool.add(c);
+      if (!sameValue(c, ans) && pool.size < 3) pool.add(c);
     }
     while (pool.size < 3) {
       const dd = pick(DENOMS);
       const nn = randInt(1, dd - 1);
       const c = `${nn}/${dd}`;
-      if (c !== ans) pool.add(c);
+      if (!sameValue(c, ans)) pool.add(c);
     }
     return makeQuestion('pizza', 'What fraction of the pizza is shaded?', ans, [...pool],
       pizzaSVG(d, n), `${n} of ${d} equal slices are shaded, so the answer is ${ans}.`, true);
+  }
+
+  function makeSimplifyQuestion() {
+    // Every simplest-form fraction a/b (b up to 6) that has a bigger equal fraction n/d with d up to 12
+    const opts = [];
+    for (let b = 2; b <= 6; b++) {
+      for (let a = 1; a < b; a++) {
+        if (gcd(a, b) !== 1) continue;
+        for (let k = 2; b * k <= 12; k++) opts.push([a, b, k]);
+      }
+    }
+    const [a, b, k] = pick(opts);
+    const n = a * k, d = b * k;
+    const ans = `${a}/${b}`;
+    const notSimplest = `${n}/${d}`;               // equal in value, but not simplest: a common mix-up
+    const cands = [`${a}/${b + 1}`];
+    if (a + 1 < b) cands.push(`${a + 1}/${b}`);
+    if (b - 1 > a) cands.push(`${a}/${b - 1}`);
+    if (a > 1) cands.push(`${a - 1}/${b}`);
+    const pool = new Set([notSimplest]);
+    for (const c of shuffle(cands)) {
+      if (!sameValue(c, ans) && pool.size < 3) pool.add(c);
+    }
+    while (pool.size < 3) {
+      const [a2, b2] = pick(opts);
+      const c = `${a2}/${b2}`;
+      if (!sameValue(c, ans)) pool.add(c);
+    }
+    return makeQuestion('simplify', `Simplify ${n}/${d} as far as you can.`, ans, [...pool],
+      pizzaSVG(d, n), `Divide the top and bottom of ${n}/${d} by ${k}. That makes ${ans}.`, true);
   }
 
   function pizzaSVG(d, n) {
@@ -359,8 +439,8 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
   function renderQuestion() {
     const q = S.q;
     const tag = $('q-tag');
-    tag.textContent = q.kind === 'pizza' ? 'Pizza Fractions' : 'Rocket Math';
-    tag.className = 'tag ' + (q.kind === 'pizza' ? 'tag-orange' : 'tag-blue');
+    tag.textContent = q.kind === 'pizza' ? 'Pizza Fractions' : q.kind === 'simplify' ? 'Simplify Fractions' : 'Rocket Math';
+    tag.className = 'tag ' + (q.kind === 'rocket' ? 'tag-blue' : 'tag-orange');
     $('q-visual').innerHTML = q.visualHTML || '';
     $('q-visual').classList.toggle('hidden', !q.visualHTML);
     const prompt = $('q-prompt');
@@ -388,8 +468,33 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
 
   /* ---------- Game flow ---------- */
 
+  /* ---------- Speed timer ---------- */
+
+  function speedBonus(ms) {
+    return Math.round(MAX_SPEED_BONUS * Math.max(0, 1 - ms / TIME_LIMIT));
+  }
+
+  function stopTimer() {
+    clearInterval(S.timerId);
+    S.timerId = null;
+  }
+
+  function tickTimer() {
+    const ms = performance.now() - S.qStart;
+    $('timer-bonus').textContent = '+' + speedBonus(ms);
+    $('timer-fill').style.width = (Math.max(0, 1 - ms / TIME_LIMIT) * 100) + '%';
+  }
+
+  function startTimer() {
+    stopTimer();
+    S.qStart = performance.now();
+    tickTimer();
+    S.timerId = setInterval(tickTimer, 100);
+  }
+
   function startGame() {
     const mode = document.querySelector('input[name=mode]:checked').value;
+    S.fracType = document.querySelector('input[name=ftype]:checked').value;
     S.tables = new Set([...document.querySelectorAll('#table-chips input:checked')].map(x => Number(x.value)));
     if (mode !== 'pizza' && S.tables.size === 0) {
       $('start-warning').classList.remove('hidden');
@@ -410,11 +515,14 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
     const kind = S.mode === 'rocket' ? 'rocket' : 'pizza';
     S.q = kind === 'rocket' ? makeRocketQuestion() : makeFractionQuestion();
     renderQuestion();
+    startTimer();
   }
 
   function answer(i) {
     if (S.answered || !S.q) return;
     S.answered = true;
+    const elapsed = performance.now() - S.qStart;
+    stopTimer();
     S.total++;
     const q = S.q;
     const ok = q.choices[i] === q.answer;
@@ -430,10 +538,12 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
       S.correct++;
       S.streak++;
       S.bestStreak = Math.max(S.bestStreak, S.streak);
-      S.score += 10 + (S.streak >= 3 ? 5 : 0);
+      const bonus = speedBonus(elapsed);
+      const points = 10 + bonus + (S.streak >= 3 ? 5 : 0);
+      S.score += points;
       S.fuel = Math.min(S.fuel + 1, FUEL_GOAL);
       if (S.fuel >= FUEL_GOAL) S.pendingLaunch = true;
-      fb.textContent = `${pick(PRAISE)} ${q.explain}`;
+      fb.textContent = `${pick(PRAISE)} +${points} points (speed bonus +${bonus}). ${q.explain}`;
       fb.className = 'feedback good';
     } else {
       S.streak = 0;
@@ -472,6 +582,7 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
   }
 
   function showSummary() {
+    stopTimer();
     if (S.score > S.best) {
       S.best = S.score;
       try { localStorage.setItem(BEST_KEY, String(S.best)); } catch (e) {}
@@ -519,10 +630,13 @@ legend{font-weight:600;margin-bottom:12px;padding:0}
       $('toggle-all').textContent = allOn ? 'Select all' : 'Clear all';
     });
 
-    document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', () => {
+    const updateSettings = () => {
       const mode = document.querySelector('input[name=mode]:checked').value;
       $('tables-card').classList.toggle('dimmed', mode === 'pizza');
-    }));
+      $('frac-card').classList.toggle('dimmed', mode === 'rocket');
+    };
+    document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', updateSettings));
+    updateSettings();
 
     document.addEventListener('keydown', e => {
       if ($('screen-play').classList.contains('hidden')) return;

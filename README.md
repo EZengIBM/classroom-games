@@ -14,8 +14,9 @@ This site has two games for 3rd grade. Start on the home page and choose a game.
 
 1. Choose a game:
    - **Rocket Math:** multiplication questions.
-   - **Pizza Fractions:** name the shaded part of a pizza.
-2. For Rocket Math, pick the times tables to practice (2s to 10s). Click **Clear all** or **Select all** to change them quickly. Pizza Fractions does not use this setting.
+   - **Pizza Fractions:** fraction questions about a pizza.
+2. For Rocket Math, pick the times tables to practice (0s to 12s). Click **Clear all** or **Select all** to change them quickly. Pizza Fractions does not use this setting.
+   For Pizza Fractions, choose the question type: **Name it** (name the shaded fraction), **Simplify it** (write a fraction in simplest form), or **Mix** of both. Rocket Math does not use this setting.
 3. Click **Start game**.
 4. Answer by clicking an answer, or by pressing **1**, **2**, **3**, or **4** on the keyboard.
 5. Click **Next question**, or press **Enter**, to keep going.
@@ -25,6 +26,7 @@ This site has two games for 3rd grade. Start on the home page and choose a game.
 ### Scoring
 
 - Each correct answer earns **10 points**.
+- **Speed bonus:** a timer bar counts down from 10 seconds. Answering right away earns up to **10 extra points**, and the bonus shrinks to 0 by 10 seconds. Both games use the timer.
 - Once you have **3 correct answers in a row**, each correct answer earns an extra **5 points**.
 - A wrong answer ends your streak. The fuel you have already earned stays in the tank.
 - Your best score is saved on the device you are using.
